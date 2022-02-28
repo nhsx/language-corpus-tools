@@ -1,0 +1,17 @@
+version: '3.4'
+
+services:
+  medcattrainer:
+    image: "${DOCKER_REGISTRY_PREFIX}medcattrainer:latest"
+    volumes:
+      - medcat-api-media:/home/api/media
+    env_file:
+      - ./services/medcat/MedCATtrainer/envs/env
+    environment:
+      DATABASE_URL: "postgres://${MEDCAT_DB_USER}:${MEDCAT_DB_PASSWORD}@${MEDCAT_DB_HOST}:${MEDCAT_DB_PORT}/${MEDCAT_DB_NAME}?sslmode=disable"
+      ADMIN_USERNAME: "${MEDCAT_USERNAME}"
+      ADMIN_PASSWORD: "${MEDCAT_PASSWORD}"
+
+volumes:
+  medcat-api-media:
+

@@ -1,0 +1,1 @@
+    reverse_proxy /* http://brat{$LOCAL_DOMAIN}:80

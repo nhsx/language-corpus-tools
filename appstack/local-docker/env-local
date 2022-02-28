@@ -1,0 +1,31 @@
+export PG_HOST=postgres
+export PG_PORT=5432
+. ./env
+export DOCKER_REGISTRY_PREFIX=""
+
+export MEDCAT_PORT=${MEDCAT_PORT:-8080}
+export DOCCANO_PORT=${DOCCANO_PORT:-8081}
+export SQLPAD_PORT=${SQLPAD_PORT:-8082}
+export BRAT_PORT=${BRAT_PORT:-8083}
+
+if [ -z "$EXT_DOMAIN" ]; then
+    export DOCCANO_ACCESS_URL=http://localhost:$DOCCANO_PORT
+    export MEDCAT_ACCESS_URL=http://localhost:$MEDCAT_PORT
+
+    export DOCCANO_CADDY_HOSTS="http://doccano.localdomain, :${DOCCANO_PORT}"
+    export MEDCAT_CADDY_HOSTS="http://medcattrainer.localdomain, :${MEDCAT_PORT}"
+    export SQLPAD_CADDY_HOSTS="http://sqlpad.localdomain, :${SQLPAD_PORT}"
+    export BRAT_CADDY_HOSTS="http://brat.localdomain, :${BRAT_PORT}"
+    export EXT_PORT_HTTP="80"
+    export EXT_PORT_HTTPS="443"
+else
+    export DOCCANO_ACCESS_URL=https://doccano.$EXT_DOMAIN
+    export MEDCAT_ACCESS_URL=https://medcattrainer.$EXT_DOMAIN
+
+    export DOCCANO_CADDY_HOSTS="doccano.$EXT_DOMAIN, :${DOCCANO_PORT}"
+    export MEDCAT_CADDY_HOSTS="medcattrainer.$EXT_DOMAIN, :${MEDCAT_PORT}"
+    export SQLPAD_CADDY_HOSTS="sqlpad.$EXT_DOMAIN, :${SQLPAD_PORT}"
+    export BRAT_CADDY_HOSTS="brat.$EXT_DOMAIN, :${BRAT_PORT}"
+    export EXT_PORT_HTTP="80:80"
+    export EXT_PORT_HTTPS="443:443"
+fi

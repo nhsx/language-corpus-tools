@@ -1,0 +1,1 @@
+resolver ${DNS_RESOLVER} valid=15s;

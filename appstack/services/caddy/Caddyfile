@@ -1,0 +1,44 @@
+{$MEDCAT_HOSTS} {
+    log {
+        format single_field common_log
+    }
+    header -Server
+    import sites/medcat.caddy
+}
+
+{$DOCCANO_HOSTS} {
+    log {
+        format single_field common_log
+    }
+    header -Server
+    import sites/doccano.caddy
+}
+
+{$SQLPAD_HOSTS} {
+    log {
+        format single_field common_log
+    }
+    header -Server
+    import sites/sqlpad.caddy
+}
+
+{$BRAT_HOSTS} {
+    log {
+        format single_field common_log
+    }
+
+    basicauth bcrypt BRAT {
+        {$BRAT_HTTP_USERNAME} {$BRAT_HTTP_PASSWORD}
+    }
+
+    header -Server
+    import sites/brat.caddy
+}
+
+
+http:// {
+    log {
+        format json
+    }
+    header -Server
+}

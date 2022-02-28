@@ -1,0 +1,373 @@
+Description:  This template deploys a VPC, with a pair of public subnets spread
+  across two Availability Zones. It deploys an internet gateway, with a default
+  route on the public subnets. It also creates a Postgres RDS instance.
+
+Parameters:
+  EnvironmentName:
+    Description: An environment name that is prefixed to resource names
+    Type: String
+    AllowedPattern: "[a-z0-9]+"
+    Default: nhs
+
+  VpcCIDR:
+    Description: Please enter the IP range (CIDR notation) for this VPC
+    Type: String
+    Default: 10.192.0.0/16
+
+  PublicSubnet1CIDR:
+    Description: Please enter the IP range (CIDR notation) for the public subnet in the first Availability Zone
+    Type: String
+    Default: 10.192.10.0/24
+
+  PublicSubnet2CIDR:
+    Description: Please enter the IP range (CIDR notation) for the public subnet in the second Availability Zone
+    Type: String
+    Default: 10.192.11.0/24
+
+{% if create_postgres %}
+  PostgresPassword:
+    Description: Please enter the postgres user password
+    Type: String
+    NoEcho: true
+{% else %}
+  PgHost:
+    Type: String
+
+  PgPort:
+    Type: Number
+{% endif %}
+
+{% for env in all_env %}
+  {{ env.camel_name }}:
+    Type: {{ env.type }}
+{% if env.password %}
+    NoEcho: true
+{% endif %}
+{% endfor %}
+
+
+Resources:
+  VPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: !Ref VpcCIDR
+      EnableDnsSupport: true
+      EnableDnsHostnames: true
+      Tags:
+        - Key: Name
+          Value: !Ref EnvironmentName
+
+  InternetGateway:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+        - Key: Name
+          Value: !Ref EnvironmentName
+
+  InternetGatewayAttachment:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      InternetGatewayId: !Ref InternetGateway
+      VpcId: !Ref VPC
+
+  PublicSubnet1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZone: !Select [ 0, !GetAZs '' ]
+      CidrBlock: !Ref PublicSubnet1CIDR
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: !Sub ${EnvironmentName} Public Subnet (AZ1)
+
+  PublicSubnet2:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZone: !Select [ 1, !GetAZs  '' ]
+      CidrBlock: !Ref PublicSubnet2CIDR
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: !Sub ${EnvironmentName} Public Subnet (AZ2)
+
+  PublicRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !Sub ${EnvironmentName} Public Routes
+
+  DefaultPublicRoute:
+    Type: AWS::EC2::Route
+    DependsOn: InternetGatewayAttachment
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref InternetGateway
+
+  PublicSubnet1RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      SubnetId: !Ref PublicSubnet1
+
+  PublicSubnet2RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      SubnetId: !Ref PublicSubnet2
+
+  DefaultSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: "Default security group"
+      VpcId: !Ref VPC
+
+  DefaultSecurityGroupIngress:
+    Properties:
+      Description: Allow communication within the default network
+      GroupId:
+        Ref: DefaultSecurityGroup
+      IpProtocol: "-1"
+      SourceSecurityGroupId:
+        Ref: DefaultSecurityGroup
+    Type: AWS::EC2::SecurityGroupIngress
+
+  DbSubnetGroup:
+    Type: AWS::RDS::DBSubnetGroup
+    Properties:
+        DBSubnetGroupDescription: Network group for postgres
+        DBSubnetGroupName: PostgresDBGroup
+        SubnetIds:
+            - !Ref PublicSubnet1
+            - !Ref PublicSubnet2
+
+{% if create_postgres %}
+  PostgresDB:
+    Type: AWS::RDS::DBInstance
+    Properties:
+        AllocatedStorage: '5'
+        DBInstanceClass: db.t2.micro
+        Engine: postgres
+        MasterUsername: postgres
+        MasterUserPassword: !Ref PostgresPassword
+        DBSubnetGroupName: !Ref DbSubnetGroup
+        VPCSecurityGroups:
+            - !Ref DefaultSecurityGroup
+    DeletionPolicy: Snapshot
+{% endif %}
+
+  TasksCluster:
+    Type: AWS::ECS::Cluster
+    Properties: 
+        CapacityProviders:
+            - FARGATE
+            - FARGATE_SPOT
+        ClusterName: !Sub ${EnvironmentName}-scrapers
+
+  LogGroup:
+    Properties:
+      LogGroupName: !Sub /${EnvironmentName}/scrapers
+    Type: AWS::Logs::LogGroup
+
+  DbInitRepo:
+    Type: AWS::ECR::Repository
+    Properties:
+        RepositoryName: !Sub ${EnvironmentName}/db_init
+
+  NginxRepo:
+    Type: AWS::ECR::Repository
+    Properties:
+        RepositoryName: !Sub ${EnvironmentName}/proxy_nginx
+
+  CaddyRepo:
+    Type: AWS::ECR::Repository
+    Properties:
+        RepositoryName: !Sub ${EnvironmentName}/proxy_caddy
+
+  MedcatRepo:
+    Type: AWS::ECR::Repository
+    Properties:
+        RepositoryName: !Sub ${EnvironmentName}/medcattrainer
+
+  ScraperCondRepo:
+    Type: AWS::ECR::Repository
+    Properties:
+        RepositoryName: !Sub ${EnvironmentName}/scraper_conditions
+
+  ScraperDataDictRepo:
+    Type: AWS::ECR::Repository
+    Properties:
+        RepositoryName: !Sub ${EnvironmentName}/scraper_datadict
+
+  ScrapersNewsRepo:
+    Type: AWS::ECR::Repository
+    Properties:
+        RepositoryName: !Sub ${EnvironmentName}/scrapers_news
+
+{% if create_postgres %}
+  DbInitTaskDefinition:
+    Properties:
+      ContainerDefinitions:
+      - Command:
+        - !Sub ${AWS::Region}.compute.internal
+        - !Sub ${EnvironmentName}-docker.local
+        Essential: false
+        Image: docker/ecs-searchdomain-sidecar:1.0
+        Name: Scraperconditions_ResolvConf_InitContainer
+      - DependsOn:
+        - Condition: SUCCESS
+          ContainerName: Scraperconditions_ResolvConf_InitContainer
+        Environment:
+        - Name: PG_HOST
+          Value: !GetAtt PostgresDB.Endpoint.Address
+        - Name: PG_PORT
+          Value: !GetAtt PostgresDB.Endpoint.Port
+        - Name: PG_USER
+          Value: postgres
+        - Name: PG_PASSWORD
+          Value: !Ref PostgresPassword
+{% for env in all_env %}
+        - Name: {{ env.name }}
+          Value: !Ref {{ env.camel_name }}
+{% endfor %}
+
+        Essential: true
+        Image: !Sub ${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/${EnvironmentName}/db_init:latest
+        LogConfiguration:
+          LogDriver: awslogs
+          Options:
+            awslogs-group: !Ref LogGroup
+            awslogs-region:
+              Ref: AWS::Region
+            awslogs-stream-prefix: !Sub ${EnvironmentName}
+        LinuxParameters: {}
+        Name: db_init
+      Cpu: "256"
+      ExecutionRoleArn:
+        Ref: ScraperTaskExecutionRole
+      Family: !Sub ${EnvironmentName}-db_init
+      Memory: "512"
+      NetworkMode: awsvpc
+      RequiresCompatibilities:
+      - FARGATE
+    Type: AWS::ECS::TaskDefinition
+{% endif %}
+
+{% for task in scraper_tasks %}
+  {{ task.camel_name }}TaskDefinition:
+    Properties:
+      ContainerDefinitions:
+      - Command:
+        - !Sub ${AWS::Region}.compute.internal
+        - !Sub ${EnvironmentName}-docker.local
+        Essential: false
+        Image: docker/ecs-searchdomain-sidecar:1.0
+        Name: Scraperconditions_ResolvConf_InitContainer
+      - DependsOn:
+        - Condition: SUCCESS
+          ContainerName: Scraperconditions_ResolvConf_InitContainer
+        Environment:
+{% if create_postgres %}
+        - Name: SCRAPY_DB_HOST
+          Value: !GetAtt PostgresDB.Endpoint.Address
+        - Name: SCRAPY_DB_PORT
+          Value: !GetAtt PostgresDB.Endpoint.Port
+        - Name: DOCCANO_DB_HOST
+          Value: !GetAtt PostgresDB.Endpoint.Address
+        - Name: DOCCANO_DB_PORT
+          Value: !GetAtt PostgresDB.Endpoint.Port
+        - Name: DATADICT_DB_HOST
+          Value: !GetAtt PostgresDB.Endpoint.Address
+        - Name: DATADICT_DB_PORT
+          Value: !GetAtt PostgresDB.Endpoint.Port
+{% else %}
+        - Name: SCRAPY_DB_HOST
+          Value: !Ref PgHost
+        - Name: SCRAPY_DB_PORT
+          Value: !Ref PgPort
+        - Name: DOCCANO_DB_HOST
+          Value: !Ref PgHost
+        - Name: DOCCANO_DB_PORT
+          Value: !Ref PgPort
+        - Name: DATADICT_DB_HOST
+          Value: !Ref PgHost
+        - Name: DATADICT_DB_PORT
+          Value: !Ref PgPort
+{% endif %}
+{% for env in all_env %}
+        - Name: {{ env.name }}
+          Value: !Ref {{ env.camel_name }}
+{% endfor %}
+        Essential: true
+        Image: !Sub ${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/${EnvironmentName}/{{ task.name }}:latest
+        LogConfiguration:
+          LogDriver: awslogs
+          Options:
+            awslogs-group: !Ref LogGroup
+            awslogs-region:
+              Ref: AWS::Region
+            awslogs-stream-prefix: !Sub ${EnvironmentName}
+        LinuxParameters: {}
+        Name: {{ task.name }}
+      Cpu: "256"
+      ExecutionRoleArn:
+        Ref: ScraperTaskExecutionRole
+      Family: !Sub ${EnvironmentName}-{{ task.name }}
+      Memory: "512"
+      NetworkMode: awsvpc
+      RequiresCompatibilities:
+      - FARGATE
+    Type: AWS::ECS::TaskDefinition
+{% endfor %}
+
+  ScraperTaskExecutionRole:
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+        - Action:
+          - sts:AssumeRole
+          Condition: {}
+          Effect: Allow
+          Principal:
+            Service: ecs-tasks.amazonaws.com
+        Version: 2012-10-17
+      ManagedPolicyArns:
+      - arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy
+      - arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly
+      Tags:
+      - Key: com.docker.compose.project
+        Value: nhs
+      - Key: com.docker.compose.service
+        Value: scraper_conditions
+    Type: AWS::IAM::Role
+
+
+Outputs:
+  VPC:
+    Description: A reference to the created VPC
+    Value: !Ref VPC
+
+  PublicSubnets:
+    Description: A list of the public subnets
+    Value: !Join [ ",", [ !Ref PublicSubnet1, !Ref PublicSubnet2 ]]
+
+  PublicSubnet1:
+    Description: A reference to the public subnet in the 1st Availability Zone
+    Value: !Ref PublicSubnet1
+
+  PublicSubnet2:
+    Description: A reference to the public subnet in the 2nd Availability Zone
+    Value: !Ref PublicSubnet2
+
+  DefaultSecurityGroup:
+    Description: Default security group
+    Value: !Ref DefaultSecurityGroup
+{% if create_postgres %}
+  PostgresDB:
+    Description: Postgres instance
+    Value: !Ref PostgresDB
+{% endif %}

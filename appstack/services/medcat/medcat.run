@@ -1,0 +1,4 @@
+#!/bin/sh
+
+/home/run.sh &
+nginx -g "daemon off;"

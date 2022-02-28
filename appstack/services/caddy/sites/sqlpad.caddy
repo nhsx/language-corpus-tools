@@ -1,0 +1,1 @@
+    reverse_proxy /* http://sqlpad{$LOCAL_DOMAIN}:3000

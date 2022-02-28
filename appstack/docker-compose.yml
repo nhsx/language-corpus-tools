@@ -1,0 +1,84 @@
+version: '3.4'
+
+services:
+
+#  nginx:
+#    image: "${DOCKER_REGISTRY_PREFIX}proxy_nginx:latest"
+#    environment:
+#      MEDCAT_HOST: "medcattrainer.*"
+#      DOCCANO_HOST: "doccano.*"
+#      LOCAL_DOMAIN: "${LOCAL_DOMAIN}"
+
+  caddy:
+    image: "${DOCKER_REGISTRY_PREFIX}proxy_caddy:latest"
+    environment:
+        DOCCANO_HOSTS: ${DOCCANO_CADDY_HOSTS}
+        MEDCAT_HOSTS: ${MEDCAT_CADDY_HOSTS}
+        SQLPAD_HOSTS: ${SQLPAD_CADDY_HOSTS}
+        BRAT_HOSTS: ${BRAT_CADDY_HOSTS}
+        BRAT_HTTP_USERNAME:
+        BRAT_HTTP_PASSWORD:
+
+  doccano:
+    image: doccano/doccano:1.2.2
+    environment:
+      ADMIN_USERNAME: "admin"
+      ADMIN_PASSWORD: "${DOCCANO_PASSWORD}"
+      ADMIN_EMAIL: "admin@example.com"
+      DATABASE_URL: "postgres://${DOCCANO_DB_USER}:${DOCCANO_DB_PASSWORD}@${DOCCANO_DB_HOST}:${DOCCANO_DB_PORT}/${DOCCANO_DB_NAME}?sslmode=disable"
+      ALLOW_SIGNUP: "False"
+      DEBUG: "False"
+
+
+  sqlpad:
+    image: sqlpad/sqlpad
+    environment:
+      SQLPAD_ADMIN:
+      SQLPAD_ADMIN_PASSWORD:
+      SQLPAD_APP_LOG_LEVEL: error
+      SQLPAD_WEB_LOG_LEVEL: error
+      SQLPAD_CONNECTIONS__datadict__name: datadict
+      SQLPAD_CONNECTIONS__datadict__driver: postgres
+      SQLPAD_CONNECTIONS__datadict__host: ${DATADICT_DB_HOST}
+      SQLPAD_CONNECTIONS__datadict__port: ${DATADICT_DB_PORT}
+      SQLPAD_CONNECTIONS__datadict__database: ${DATADICT_DB_NAME}
+      SQLPAD_CONNECTIONS__datadict__username: ${DATADICT_DB_USER}
+      SQLPAD_CONNECTIONS__datadict__password: ${DATADICT_DB_PASSWORD}
+      SQLPAD_CONNECTIONS__datadict__multiStatementTransactionEnabled: 'true'
+      SQLPAD_CONNECTIONS__datadict__idleTimeoutSeconds: 86400
+      SQLPAD_CONNECTIONS__doccano__name: doccano
+      SQLPAD_CONNECTIONS__doccano__driver: postgres
+      SQLPAD_CONNECTIONS__doccano__host: ${DOCCANO_DB_HOST}
+      SQLPAD_CONNECTIONS__doccano__port: ${DOCCANO_DB_PORT}
+      SQLPAD_CONNECTIONS__doccano__database: ${DOCCANO_DB_NAME}
+      SQLPAD_CONNECTIONS__doccano__username: ${DOCCANO_DB_USER}
+      SQLPAD_CONNECTIONS__doccano__password: ${DOCCANO_DB_PASSWORD}
+      SQLPAD_CONNECTIONS__doccano__multiStatementTransactionEnabled: 'true'
+      SQLPAD_CONNECTIONS__doccano__idleTimeoutSeconds: 86400
+      SQLPAD_CONNECTIONS__medcat__name: medcat
+      SQLPAD_CONNECTIONS__medcat__driver: postgres
+      SQLPAD_CONNECTIONS__medcat__host: ${MEDCAT_DB_HOST}
+      SQLPAD_CONNECTIONS__medcat__port: ${MEDCAT_DB_PORT}
+      SQLPAD_CONNECTIONS__medcat__database: ${MEDCAT_DB_NAME}
+      SQLPAD_CONNECTIONS__medcat__username: ${MEDCAT_DB_USER}
+      SQLPAD_CONNECTIONS__medcat__password: ${MEDCAT_DB_PASSWORD}
+      SQLPAD_CONNECTIONS__medcat__multiStatementTransactionEnabled: 'true'
+      SQLPAD_CONNECTIONS__medcat__idleTimeoutSeconds: 86400
+      SQLPAD_CONNECTIONS__scrapy__name: scrapy
+      SQLPAD_CONNECTIONS__scrapy__driver: postgres
+      SQLPAD_CONNECTIONS__scrapy__host: ${SCRAPY_DB_HOST}
+      SQLPAD_CONNECTIONS__scrapy__port: ${SCRAPY_DB_PORT}
+      SQLPAD_CONNECTIONS__scrapy__database: ${SCRAPY_DB_NAME}
+      SQLPAD_CONNECTIONS__scrapy__username: ${SCRAPY_DB_USER}
+      SQLPAD_CONNECTIONS__scrapy__password: ${SCRAPY_DB_PASSWORD}
+      SQLPAD_CONNECTIONS__scrapy__multiStatementTransactionEnabled: 'true'
+      SQLPAD_CONNECTIONS__scrapy__idleTimeoutSeconds: 86400
+    volumes:
+      - sqlpad-data:/var/lib/sqlpad
+
+
+volumes:
+  sqlpad-data:
+
+networks:
+  default:

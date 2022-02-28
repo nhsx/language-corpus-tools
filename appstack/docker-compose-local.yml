@@ -1,0 +1,166 @@
+version: '3.4'
+
+services:
+
+#  nginx:
+#    environment:
+#      DNS_RESOLVER: 127.0.0.11
+#      LOCAL_DOMAIN: ""
+#    ports:
+#      - "127.0.0.1:8000:80"
+
+  caddy:
+    ports:
+        - "${EXT_PORT_HTTP}"
+        - "${EXT_PORT_HTTPS}"
+        - "${MEDCAT_PORT}:${MEDCAT_PORT}"
+        - "${DOCCANO_PORT}:${DOCCANO_PORT}"
+        - "${SQLPAD_PORT}:${SQLPAD_PORT}"
+        - "${BRAT_PORT}:${BRAT_PORT}"
+    volumes:
+        - caddy-data:/data
+
+  db_init:
+    image: "db_init:latest"
+    restart: "no"
+    environment:
+        PG_HOST: postgres
+        PG_PORT: 5432
+        PG_USER: postgres
+        PG_PASSWORD:
+        SCRAPY_DB_NAME:
+        SCRAPY_DB_USER:
+        SCRAPY_DB_PASSWORD:
+        DOCCANO_DB_NAME:
+        DOCCANO_DB_USER:
+        DOCCANO_DB_PASSWORD:
+        MEDCAT_DB_NAME:
+        MEDCAT_DB_USER:
+        MEDCAT_DB_PASSWORD:
+        DATADICT_DB_NAME:
+        DATADICT_DB_USER:
+        DATADICT_DB_PASSWORD:
+    depends_on:
+        - postgres
+
+  scraper_conditions:
+    image: "scraper_conditions:latest"
+    restart: "no"
+    command: "/bin/false"
+    environment:
+      SCRAPY_DB_HOST:
+      SCRAPY_DB_PORT:
+      SCRAPY_DB_NAME:
+      SCRAPY_DB_USER:
+      SCRAPY_DB_PASSWORD:
+      DOCCANO_DB_HOST:
+      DOCCANO_DB_PORT:
+      DOCCANO_DB_NAME:
+      DOCCANO_DB_USER:
+      DOCCANO_DB_PASSWORD:
+      DATADICT_DB_HOST:
+      DATADICT_DB_PORT:
+      DATADICT_DB_NAME:
+      DATADICT_DB_USER:
+      DATADICT_DB_PASSWORD:
+      MEDCAT_API_URL:
+      MEDCAT_USERNAME:
+      MEDCAT_PASSWORD:
+      MEDCAT_DATASET_ID_COND:
+      MEDCAT_DATASET_ID_NEWS:
+      DOCCANO_PROJECT_ID_COND:
+      DOCCANO_PROJECT_ID_NEWS:
+      NHS_API_KEY:
+      ENABLE_MEDCAT_TRAINER:
+      BRAT_DATA_PATH: /brat-data
+    volumes:
+        - ${HOME}/brat-data:/brat-data
+
+  scrapers_news:
+    image: "scrapers_news:latest"
+    restart: "no"
+    command: "/bin/false"
+    environment:
+      SCRAPY_DB_HOST:
+      SCRAPY_DB_PORT:
+      SCRAPY_DB_NAME:
+      SCRAPY_DB_USER:
+      SCRAPY_DB_PASSWORD:
+      DOCCANO_DB_HOST:
+      DOCCANO_DB_PORT:
+      DOCCANO_DB_NAME:
+      DOCCANO_DB_USER:
+      DOCCANO_DB_PASSWORD:
+      DATADICT_DB_HOST:
+      DATADICT_DB_PORT:
+      DATADICT_DB_NAME:
+      DATADICT_DB_USER:
+      DATADICT_DB_PASSWORD:
+      MEDCAT_API_URL:
+      MEDCAT_USERNAME:
+      MEDCAT_PASSWORD:
+      MEDCAT_DATASET_ID_COND:
+      MEDCAT_DATASET_ID_NEWS:
+      DOCCANO_PROJECT_ID_COND:
+      DOCCANO_PROJECT_ID_NEWS:
+      NHS_API_KEY:
+      ENABLE_MEDCAT_TRAINER:
+      BRAT_DATA_PATH: /brat-data
+    volumes:
+        - ${HOME}/brat-data:/brat-data
+
+  scraper_datadict:
+    image: "scraper_datadict:latest"
+    restart: "no"
+    command: "/bin/false"
+    environment:
+      - SCRAPY_DB_HOST
+      - SCRAPY_DB_PORT
+      - SCRAPY_DB_NAME
+      - SCRAPY_DB_USER
+      - SCRAPY_DB_PASSWORD
+      - DOCCANO_DB_HOST
+      - DOCCANO_DB_PORT
+      - DOCCANO_DB_NAME
+      - DOCCANO_DB_USER
+      - DOCCANO_DB_PASSWORD
+      - DATADICT_DB_HOST
+      - DATADICT_DB_PORT
+      - DATADICT_DB_NAME
+      - DATADICT_DB_USER
+      - DATADICT_DB_PASSWORD
+      - MEDCAT_API_URL
+      - MEDCAT_USERNAME
+      - MEDCAT_PASSWORD
+      - MEDCAT_DATASET_ID_COND
+      - MEDCAT_DATASET_ID_NEWS
+      - DOCCANO_PROJECT_ID_COND
+      - DOCCANO_PROJECT_ID_NEWS
+      - NHS_API_KEY
+      - ENABLE_MEDCAT_TRAINER
+
+  postgres:
+    image: postgres:13-alpine
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    environment:
+      POSTGRES_PASSWORD: "${PG_PASSWORD}"
+    ports:
+      - "127.0.0.1:5432:5432"
+
+  brat:
+    image: brat
+    environment:
+        BRAT_USERNAME: brat
+        BRAT_PASSWORD: ${DOCCANO_PASSWORD}
+        BRAT_EMAIL: brat@example.com
+    volumes:
+        - brat-config:/bratconfig
+        - ${HOME}/brat-data:/bratdata
+    #command: /bin/false
+
+volumes:
+  postgres-data:
+  caddy-data:
+  brat-config:
+  brat-data:
