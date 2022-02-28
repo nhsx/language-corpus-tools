@@ -4,7 +4,7 @@ Overview
 This folder contains a web scraping framework based on [scrapy](https://scrapy.org/) (see the `scrapy` folder) and a collection of scrapers for various
 sources (see the `scraper*` folders).
 
-The framework is responsible for making sure there are no duplicates and for storing the documents in the appropriate target systems (currently MedCATTrainer
+The framework is responsible for making sure there are no duplicates and for storing the documents in the appropriate target systems (currently BRAT, MedCAT Trainer
 and Doccano for free text items and datadict database for DataDictionary items).
 
 The scrapers produce a sequence of Requests and callbacks for handling responses. The callbacks are expected to generate Items that are then handled by

@@ -1,8 +1,7 @@
 NHS Language Corpus Tools
 ===
 
-This project seeks to build the first steps towards building a data set of UK focussed medical text sources for the purposes of training and benchmarking
-NLP models for NHSX. 
+This project seeks to build the first steps towards building a data set of NHS focussed text sources for the purposes of training and benchmarking NLP models in the NHS. 
 
 The aim was to test thinking and feasibility of such a solution by exploring aspects of; infrastructure, scalability and maintenance; possible data
 sources, appropriate metadata, clinical input and required governance; as well as possible use cases of the outputs for training, benchmarking, validating

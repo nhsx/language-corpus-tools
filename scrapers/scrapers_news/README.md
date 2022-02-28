@@ -1,0 +1,1 @@
+`spider_news_example.py` contains an example of how to extract news from a trust site.
