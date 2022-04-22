@@ -1,4 +1,4 @@
-# NHS Language Corpus Discovery Tools
+# NHS Language Corpus Tools - Discovery
 ## Analytics Unit - Discovery Project
 
 ### Warning to Users
