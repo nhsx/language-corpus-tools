@@ -1,3 +1,5 @@
+[![status: hibernate](https://github.com/GIScience/badges/raw/master/status/hibernate.svg)](https://github.com/GIScience/badges#hibernate)
+
 # NHS Language Corpus Tools - Discovery
 ## Analytics Unit - Discovery Project
 
